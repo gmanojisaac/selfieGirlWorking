@@ -811,17 +811,15 @@ vec3 renderGirl( in vec2 p, in vec3 ro, in vec3 rd, in float tmax, in vec3 col, 
     return col;
 }
 
-// Animates the head turn. This is my first time animating
-// and I am aware I'm in uncanny/animatronic land. But I
-// have to start somwhere!
+// Turns the character from facing away from the camera to
+// facing the camera during the five-second opening.
 //
 float animTurn( in float time )
-{	
-    const float w = 6.1;
-    float t = mod(time,w*2.0);
-    
-    vec3 p = (t<w) ? vec3(0.0,0.0,1.0) : vec3(w,1.0,-1.0);
-    return p.y + p.z*expSustainedImpulse(t-p.x,1.0,10.0);
+{
+    // mainImage offsets time by two seconds, so remove that offset
+    // to make the transition start when the preview starts.
+    float introTime = max(time-2.0,0.0);
+    return smoothstep(0.0,5.0,introTime);
 }
 
 // Animates the eye blinks. Blinks are motivated by head
@@ -895,9 +893,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         // animation (head orientation)
         animHead = vec3( sin(time*0.5), sin(time*0.3), -cos(time*0.2) );
         animHead = animHead*animHead*animHead;
-        animHead.x = -0.025*animHead.x + 0.2*(0.7+0.3*turn);
-        animHead.y =  0.1 + 0.02*animHead.y*animHead.y*animHead.y;
-        animHead.z = -0.03*(0.5 + 0.5*animHead.z) - (1.0-turn)*0.05;
+        // Rotate 180 degrees around the Y axis, then settle at front-facing.
+        animHead.x = mix(3.14159265, 0.0, turn);
+        animHead.y = turn*(0.1 + 0.02*animHead.y*animHead.y*animHead.y);
+        animHead.z = turn*(-0.03*(0.5 + 0.5*animHead.z) - (1.0-turn)*0.05);
         
         // rendering
         vec4 tmp = texelFetch(iChannel1,ivec2(fragCoord),0);

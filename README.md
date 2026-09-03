@@ -1,8 +1,10 @@
 # Selfie Girl — GLSL Shader Project (Shader Studio)
 
 A real-time, multi-pass **GLSL fragment shader** that raymarches a portrait of a girl
-posing in front of a snowy mountain landscape. The scene animates by itself (head
-turns, blinking, hair and water movement) — no mouse or keyboard input needed.
+posing in front of a snowy mountain landscape. The scene animates by itself: the
+character starts facing away, turns naturally toward the camera over five seconds,
+then continues with blinking and subtle facial motion — no mouse or keyboard input
+needed.
 
 This project is a port of the Shadertoy shader
 **["Selfie Girl" (WsSBzh) by Xor](https://www.shadertoy.com/view/WsSBzh)** into a
