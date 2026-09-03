@@ -110,10 +110,9 @@ vec4 sdHoodie( in vec3 pos )
     return vec4(d,pos);
 }
 
-// moves the head (and hair and hoodie). This could be done
-// more efficiently (with a single matrix or quaternion),
-// but this code was optimized for editing, not for runtime
-vec3 moveHead( in vec3 pos, in vec3 an, in float amount)
+// Rotate all character components around one shared pivot to keep the SDF
+// features aligned throughout the full turn.
+vec3 moveCharacter( in vec3 pos, in vec3 an, in float amount)
 {
     pos.y -= -1.0;
     pos.xz = rot(pos.xz,amount*an.x);
@@ -154,11 +153,11 @@ vec4 map( in vec3 pos, in float time, out float outMat, out vec3 uvw )
 
     vec3 oriPos = pos;
     
-    // head deformation and transformation
+    // Apply the same turn to the complete character rather than blending the
+    // angle by height, which twists the face and clothing at intermediate angles.
     pos.y /= 1.04;
-    vec3 opos;
-    opos = moveHead( pos, animHead, smoothstep(-1.2, 0.2,pos.y) );
-    pos  = moveHead( pos, animHead, smoothstep(-1.4,-1.0,pos.y) );
+    pos = moveCharacter( pos, animHead, 1.0 );
+    vec3 opos = pos;
     pos.x *= 1.04;
     pos.y /= 1.02;
     uvw = pos;
@@ -811,15 +810,14 @@ vec3 renderGirl( in vec2 p, in vec3 ro, in vec3 rd, in float tmax, in vec3 col, 
     return col;
 }
 
-// Turns the character from facing away from the camera to
-// facing the camera during the five-second opening.
-//
+// Smooth full turn with a brief front-facing pause before repeating.
 float animTurn( in float time )
 {
-    // mainImage offsets time by two seconds, so remove that offset
-    // to make the transition start when the preview starts.
-    float introTime = max(time-2.0,0.0);
-    return smoothstep(0.0,5.0,introTime);
+    float cycleTime = mod(max(time-2.0, 0.0), 25.0);
+    float turnTime = clamp(cycleTime/20.0, 0.0, 1.0);
+    float easedTime = turnTime*turnTime*(3.0 - 2.0*turnTime);
+    float overshoot = 0.08*sin(turnTime*12.56637062)*(1.0-turnTime);
+    return clamp(easedTime + overshoot, 0.0, 1.0);
 }
 
 // Animates the eye blinks. Blinks are motivated by head
@@ -893,10 +891,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         // animation (head orientation)
         animHead = vec3( sin(time*0.5), sin(time*0.3), -cos(time*0.2) );
         animHead = animHead*animHead*animHead;
-        // Rotate 180 degrees around the Y axis, then settle at front-facing.
-        animHead.x = mix(3.14159265, 0.0, turn);
-        animHead.y = turn*(0.1 + 0.02*animHead.y*animHead.y*animHead.y);
-        animHead.z = turn*(-0.03*(0.5 + 0.5*animHead.z) - (1.0-turn)*0.05);
+        // Start facing camera, complete one full yaw rotation, then return to
+        // the same pose. Pitch and roll fade out at both cycle boundaries.
+        animHead.x = 6.28318531*turn;
+        float turnSway = sin(3.14159265*turn);
+        animHead.y = turnSway*(0.1 + 0.02*animHead.y*animHead.y*animHead.y);
+        animHead.z = turnSway*(-0.03*(0.5 + 0.5*animHead.z));
         
         // rendering
         vec4 tmp = texelFetch(iChannel1,ivec2(fragCoord),0);
