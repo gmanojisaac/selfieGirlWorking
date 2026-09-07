@@ -153,8 +153,9 @@ float calcOcclusion( in vec3 pos, in vec3 nor, in float time )
 // response and materials, but generally all signal do
 // follow physically based rendering practices.
 //
-vec3 renderGirl( in vec3 ro, in vec3 rd, in float tmax, in vec3 col, in float time )
+vec3 renderGirl( in vec3 ro, in vec3 rd, in float tmax, in vec3 col, in float time, out float coverage )
 {
+    coverage = 0.0;
     // --------------------------
     // find ray-girl intersection
     // --------------------------
@@ -166,6 +167,7 @@ vec3 renderGirl( in vec3 ro, in vec3 rd, in float tmax, in vec3 col, in float ti
     // --------------------------
     if( tm.y>0.0 )
     {
+        coverage = 1.0;
         vec3 pos = ro + tm.x*rd;
         vec3 nor = calcNormal(pos, time);
 

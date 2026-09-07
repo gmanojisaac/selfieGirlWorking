@@ -450,6 +450,10 @@ mat3 calcCamera( in float time, out vec3 oRo, out float oFl )
 
 // Shared quality settings must precede both intersect and mainImage.
 #define INTERACTIVE 1  // Set to 1 for fast preview; 0 preserves final quality.
+// A fixed backdrop lets the camera orbit the girl without moving the room.
+#define FIXED_BACKGROUND 1
+// Enable after installing the cleaned reference PNG on iChannel1.
+#define PHOTO_BACKGROUND 0
 #if INTERACTIVE
     #define AA 1
     const int RAYMARCH_STEPS = 160;

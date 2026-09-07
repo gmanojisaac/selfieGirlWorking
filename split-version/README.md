@@ -17,7 +17,8 @@ below. The character animation is retained.
 | 5 | `raymarching.glsl` | `intersect`: bounding-volume clipping and camera-ray marching. |
 | 6 | `lighting_shading.glsl` | `suitBrocade`, `suitStitches`, detail SDF `mapD`, `calcNormal`, `calcSoftshadow`, `calcOcclusion`, `renderGirl`, and `portraitTonemap`. |
 | 7 | `studio_background.glsl` | Analytic room, wood grain, shelves, window, garden highlights, plants, leather chair and `portraitBackground(ro, rd)`. |
-| 8 | `main_image.glsl` | `mainImage`: animation setup, camera, spatial supersampling, background/composition, vignette and final output. |
+| 8 | `background_composition.glsl` | Fixed background camera, aspect-preserving photo sampling and separate background color handling. |
+| 9 | `main_image.glsl` | `mainImage`: animation setup, camera, spatial supersampling, per-sample foreground/background composition and final output. |
 
 `map` remains one intact function because its face, eyes, hair/scalp and outfit
 comparisons share transformed coordinates and update material and UVW outputs in
@@ -25,7 +26,7 @@ a specific order. Its calls to the separate hair and clothing SDF functions are
 unchanged. This preserves the original calculations and comparison order.
 
 Every function is defined before use. The runtime source order is `common.glsl`
-followed by the seven Image modules above. There are no `#include` directives or
+followed by the eight Image modules above. There are no `#include` directives or
 forward-declaration stubs.
 
 ## Regenerate
@@ -38,7 +39,7 @@ node bundle.mjs
 node bundle.mjs --check
 ```
 
-`bundle.mjs` concatenates the seven Image modules in the listed dependency order
+`bundle.mjs` concatenates the eight Image modules in the listed dependency order
 into **`selfie_modifyAndStudy.glsl`**. It adds file-boundary comments and
 normalizes line endings to LF; it does not transform shader expressions. Edit the
 split files, then regenerate and refresh the preview. Do not edit the generated
@@ -119,6 +120,44 @@ See `../../../shader-review/ivory-studio/` relative to this folder for
 the capture script and full-resolution images. These renders do not establish
 hardware frame rate or guarantee Shader Studio's driver-specific compile time.
 
+## Fixed photographic background work
+
+The procedural-room baseline is preserved in GitHub release `v1.2.0` at
+commit `17f2b8031748fa225d1acec56bca0e2df3df17a1`. Subsequent work is on
+`feature/fixed-photo-background`.
+
+`FIXED_BACKGROUND = 1` in Common now holds the room at the starting front
+composition while the character camera orbits. `PHOTO_BACKGROUND = 0` retains
+this procedural fallback until the cleaned reference photograph is available.
+The existing photograph has not yet been installed or reconstructed.
+
+To install the final asset:
+
+1. Save the cleaned, mannequin-free reference image as `studio-background.png`
+   beside this README. The Node preview server allows this filename.
+2. Set Image `iChannel1` in `selfie_modifyAndStudy.sha.json` to
+   `{ "type": "texture", "path": "studio-background.png", "filter": "linear", "wrap": "clamp", "vflip": true }`.
+3. Set `#define PHOTO_BACKGROUND 1` in `common.glsl`, regenerate with Node and
+   reload the preview. Both runtimes use the configured vertically flipped PNG.
+
+The photograph uses a centered cover crop without stretching, explicit level-zero
+texture sampling, and no additional background blur. Its display colors bypass
+the girl's tone mapping and vignette. Each AA sample composites the shaded girl
+using hit coverage, including samples along the silhouette. Source resolution
+still limits visible detail; shader sampling cannot restore missing photo detail.
+
+Reference requested: <https://www.shadertoy.com/view/4tByz3>. Direct source access
+returned HTTP 403 in this environment. No code from this shader has been copied
+or claimed as implemented; adapting its techniques is pending accessible source.
+
+Validation: Shader Studio 1.0.2 wrapped-source WebGL2/ANGLE SwiftShader renders
+passed in interactive fixed-room mode at 960 x 540 and high-quality photo mode
+at 640 x 360. Four corner probes stayed byte-identical through front, right,
+rear and left orbit times. A synthetic four-color photo fixture also verified
+exact corner colors and vertical orientation. Front and rear fixed-room images
+were visually inspected. This does not resolve the native Shader Studio driver
+compile error or validate the final photograph, which is still pending.
+
 ## Browser preview
 
 ```powershell
@@ -129,13 +168,14 @@ Open <http://127.0.0.1:8080/blazer-preview.html>. Stop the server with Ctrl+C.
 To use another port, run `node serve-preview.mjs 8081`. The server serves only
 this folder's preview runtime files and writes no logs.
 
-The copied `blazer-preview.html` is byte-for-byte unchanged and defaults to the
-generated `selfie_modifyAndStudy.glsl`. For a deterministic still, use
+The browser preview defaults to the generated `selfie_modifyAndStudy.glsl` and
+also loads the configured background texture when photo mode is enabled.
+For a deterministic still, use
 <http://127.0.0.1:8080/blazer-preview.html?time=0&width=480&height=270>.
 Omit `time` to animate the orbit; the existing button/Space key pauses playback.
 
-`texture0.png` and `texture2.png` are used by this Image shader. The unchanged
-HTML also loads `texture3.png`, so all three texture files are copied unchanged.
+`texture0.png` and `texture2.png` are used by this Image shader. The HTML also
+loads `texture3.png`, so all three original texture files are retained.
 The study renders its background in the Image pass and does not use the older
 `bufferA.glsl` or `bufferB.glsl` passes.
 

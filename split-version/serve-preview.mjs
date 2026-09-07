@@ -10,6 +10,7 @@ const files = new Map([
   ['texture0.png', 'image/png'],
   ['texture2.png', 'image/png'],
   ['texture3.png', 'image/png'],
+  ['studio-background.png', 'image/png'],
 ]);
 const port = Number(process.argv[2] ?? 8080);
 if (!Number.isInteger(port) || port < 1 || port > 65535 || process.argv.length > 3) {

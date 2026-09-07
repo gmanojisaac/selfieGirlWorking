@@ -9,6 +9,7 @@ const sources = [
   'raymarching.glsl',
   'lighting_shading.glsl',
   'studio_background.glsl',
+  'background_composition.glsl',
   'main_image.glsl',
 ];
 const outputName = 'selfie_modifyAndStudy.glsl';

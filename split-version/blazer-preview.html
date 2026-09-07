@@ -77,7 +77,7 @@ async function start() {
     gl.uniform1f(gl.getUniformLocation(program, 'iTime'), 0.0);
     gl.uniform1i(gl.getUniformLocation(program, 'iFrame'), 0);
 
-    const loadTexture = async (unit, src, filter = gl.LINEAR, wrap = gl.CLAMP_TO_EDGE) => {
+    const loadTexture = async (unit, src, filter = gl.LINEAR, wrap = gl.CLAMP_TO_EDGE, vflip = false) => {
       const image = new Image();
       image.src = './' + src;
       await image.decode();
@@ -88,7 +88,9 @@ async function start() {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, filter);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, wrap);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, wrap);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, vflip);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
       return tex;
     };
 
@@ -105,6 +107,14 @@ async function start() {
     const atlas = await loadTexture(gl.TEXTURE0, 'texture0.png', gl.LINEAR, gl.CLAMP_TO_EDGE);
     const texture2 = await loadTexture(gl.TEXTURE2, 'texture2.png', gl.LINEAR, gl.REPEAT);
     const texture3 = await loadTexture(gl.TEXTURE3, 'texture3.png', gl.NEAREST, gl.REPEAT);
+    const photoEnabled = /^\s*#define\s+PHOTO_BACKGROUND\s+1\b/m.test(commonSource);
+    if (photoEnabled) {
+      const photo = config.passes?.Image?.inputs?.iChannel1;
+      if (photo?.type !== 'texture' || !photo.path || photo.path === 'texture0.png') {
+        throw new Error('Set iChannel1 to the cleaned background photo before enabling PHOTO_BACKGROUND.');
+      }
+      await loadTexture(gl.TEXTURE1, photo.path, gl.LINEAR, gl.CLAMP_TO_EDGE, photo.vflip === true);
+    }
 
     gl.uniform1i(gl.getUniformLocation(program, 'iChannel0'), 0);
     gl.uniform1i(gl.getUniformLocation(program, 'iChannel1'), 1);

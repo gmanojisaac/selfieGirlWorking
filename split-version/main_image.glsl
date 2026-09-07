@@ -15,6 +15,8 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
     vec3 ro;
     mat3 camera = portraitCamera(iTime,ro);
     vec3 total = vec3(0.0);
+    vec2 q = (2.0*fragCoord-iResolution.xy)/iResolution.xy;
+    float vignette = 1.0-0.13*smoothstep(0.35,1.6,dot(q,q));
     for(int m=ZERO; m<AA; m++)
     for(int n=ZERO; n<AA; n++)
     {
@@ -23,11 +25,13 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
         // Preserve the entire head in narrow windows as well as landscape.
         float fit = max(1.0,0.95*iResolution.y/iResolution.x);
         vec3 rd = camera*normalize(vec3(p*fit,2.70));
-        vec3 background = portraitBackground(ro,rd);
-        total += renderGirl(ro,rd,20.0,background,time);
+        vec3 background = sceneBackground(fragCoord+offset,p*fit,ro,rd,vignette);
+        float coverage;
+        vec3 girl = renderGirl(ro,rd,20.0,vec3(0.0),time,coverage);
+        // Composite each sample after tone mapping. Background pixels keep
+        // their original colors, including along supersampled garment edges.
+        total += mix(background,portraitTonemap(girl*vignette),coverage);
     }
     total /= float(AA*AA);
-    vec2 q = (2.0*fragCoord-iResolution.xy)/iResolution.xy;
-    total *= 1.0-0.13*smoothstep(0.35,1.6,dot(q,q));
-    fragColor = vec4(portraitTonemap(total),1.0);
+    fragColor = vec4(total,1.0);
 }

@@ -656,8 +656,9 @@ float calcOcclusion( in vec3 pos, in vec3 nor, in float time )
 // response and materials, but generally all signal do
 // follow physically based rendering practices.
 //
-vec3 renderGirl( in vec3 ro, in vec3 rd, in float tmax, in vec3 col, in float time )
+vec3 renderGirl( in vec3 ro, in vec3 rd, in float tmax, in vec3 col, in float time, out float coverage )
 {
+    coverage = 0.0;
     // --------------------------
     // find ray-girl intersection
     // --------------------------
@@ -669,6 +670,7 @@ vec3 renderGirl( in vec3 ro, in vec3 rd, in float tmax, in vec3 col, in float ti
     // --------------------------
     if( tm.y>0.0 )
     {
+        coverage = 1.0;
         vec3 pos = ro + tm.x*rd;
         vec3 nor = calcNormal(pos, time);
 
@@ -1128,6 +1130,40 @@ vec3 portraitBackground(in vec3 ro, in vec3 rd)
     return max(col,vec3(0.0));
 }
 
+// ---- background_composition.glsl ----
+// The photo is already display-ready: never apply the girl's exposure curve
+// or vignette to it. Read level zero to retain the source image's fine detail.
+vec3 photoBackground(vec2 fragCoord)
+{
+    vec2 size = vec2(textureSize(iChannel1,0));
+    vec2 uv = fragCoord/iResolution.xy;
+    float imageAspect = size.x/max(size.y,1.0);
+    float screenAspect = iResolution.x/iResolution.y;
+    // Centered cover crop: preserve proportions at portrait and landscape sizes.
+    vec2 visible = vec2(min(screenAspect/imageAspect,1.0),
+                        min(imageAspect/screenAspect,1.0));
+    uv = (uv-0.5)*visible+0.5;
+    return textureLod(iChannel1,uv,0.0).rgb;
+}
+
+vec3 sceneBackground(vec2 fragCoord, vec2 screenRay, vec3 ro, vec3 rd, float vignette)
+{
+#if PHOTO_BACKGROUND
+    return photoBackground(fragCoord);
+#else
+    #if FIXED_BACKGROUND
+        vec3 backgroundOrigin;
+        // Starting front composition, independent of animation time.
+        mat3 backgroundCamera = portraitCamera(0.1*ORBIT_SECONDS/6.28318530718,backgroundOrigin);
+        vec3 backgroundRay = backgroundCamera*normalize(vec3(screenRay,2.70));
+        vec3 color = portraitBackground(backgroundOrigin,backgroundRay);
+    #else
+        vec3 color = portraitBackground(ro,rd);
+    #endif
+    return portraitTonemap(color*vignette);
+#endif
+}
+
 // ---- main_image.glsl ----
 // INTERACTIVE in common.glsl selects AA and the camera-ray marching accuracy.
 void mainImage(out vec4 fragColor,in vec2 fragCoord)
@@ -1146,6 +1182,8 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
     vec3 ro;
     mat3 camera = portraitCamera(iTime,ro);
     vec3 total = vec3(0.0);
+    vec2 q = (2.0*fragCoord-iResolution.xy)/iResolution.xy;
+    float vignette = 1.0-0.13*smoothstep(0.35,1.6,dot(q,q));
     for(int m=ZERO; m<AA; m++)
     for(int n=ZERO; n<AA; n++)
     {
@@ -1154,11 +1192,13 @@ void mainImage(out vec4 fragColor,in vec2 fragCoord)
         // Preserve the entire head in narrow windows as well as landscape.
         float fit = max(1.0,0.95*iResolution.y/iResolution.x);
         vec3 rd = camera*normalize(vec3(p*fit,2.70));
-        vec3 background = portraitBackground(ro,rd);
-        total += renderGirl(ro,rd,20.0,background,time);
+        vec3 background = sceneBackground(fragCoord+offset,p*fit,ro,rd,vignette);
+        float coverage;
+        vec3 girl = renderGirl(ro,rd,20.0,vec3(0.0),time,coverage);
+        // Composite each sample after tone mapping. Background pixels keep
+        // their original colors, including along supersampled garment edges.
+        total += mix(background,portraitTonemap(girl*vignette),coverage);
     }
     total /= float(AA*AA);
-    vec2 q = (2.0*fragCoord-iResolution.xy)/iResolution.xy;
-    total *= 1.0-0.13*smoothstep(0.35,1.6,dot(q,q));
-    fragColor = vec4(portraitTonemap(total),1.0);
+    fragColor = vec4(total,1.0);
 }
