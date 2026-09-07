@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "passes": {
+    "common": {
+      "path": "common.glsl"
+    },
+    "BufferA": {
+      "path": "bufferA.glsl",
+      "inputs": {
+        "iChannel0": { "type": "texture", "path": "texture0.png", "filter": "linear", "wrap": "clamp" },
+        "iChannel1": { "type": "buffer", "source": "BufferA" },
+        "iChannel2": { "type": "texture", "path": "texture2.png", "filter": "linear", "wrap": "repeat" },
+        "iChannel3": { "type": "texture", "path": "texture3.png", "filter": "nearest", "wrap": "repeat" }
+      }
+    },
+    "BufferB": {
+      "path": "bufferB.glsl",
+      "inputs": {
+        "iChannel0": { "type": "buffer", "source": "BufferA" }
+      }
+    },
+    "Image": {
+      "resolution": { "width": 1280, "height": 720 },
+      "inputs": {
+        "iChannel0": { "type": "texture", "path": "texture0.png", "filter": "linear", "wrap": "clamp" },
+        "iChannel1": { "type": "buffer", "source": "BufferB" },
+        "iChannel2": { "type": "texture", "path": "texture2.png", "filter": "linear", "wrap": "repeat" },
+        "iChannel3": { "type": "texture", "path": "texture3.png", "filter": "nearest", "wrap": "repeat" }
+      }
+    }
+  }
+}

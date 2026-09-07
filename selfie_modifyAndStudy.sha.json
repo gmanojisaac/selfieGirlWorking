@@ -1,0 +1,34 @@
+{
+  "version": "1.0",
+  "passes": {
+    "common": {
+      "path": "common.glsl"
+    },
+    "Image": {
+      "resolution": {
+        "width": 1920,
+        "height": 1080
+      },
+      "inputs": {
+        "iChannel0": {
+          "type": "texture",
+          "path": "texture0.png",
+          "filter": "linear",
+          "wrap": "clamp"
+        },
+        "iChannel1": {
+          "type": "texture",
+          "path": "texture0.png",
+          "filter": "linear",
+          "wrap": "clamp"
+        },
+        "iChannel2": {
+          "type": "texture",
+          "path": "texture2.png",
+          "filter": "linear",
+          "wrap": "repeat"
+        }
+      }
+    }
+  }
+}
